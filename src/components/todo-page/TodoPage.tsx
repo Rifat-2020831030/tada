@@ -5,13 +5,12 @@ import {
   TextInput,
   TouchableOpacity,
   StyleSheet,
-  SafeAreaView,
   Modal,
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import DraggableFlatList, {
   RenderItemParams,
-  ScaleDecorator,
 } from 'react-native-draggable-flatlist';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { useTheme } from '../../theme';
@@ -29,6 +28,7 @@ import {
   indentTodoItem,
   outdentTodoItem,
   updateTodoPosition,
+  completeAllTodoItems,
 } from '../../db/queries/todoItems';
 import { useTodoItems, FlattenedTodoRow } from '../../hooks/useTodoItems';
 import { TodoItemRow } from './TodoItem';
@@ -132,6 +132,10 @@ export const TodoPage = ({ document }: TodoPageProps) => {
     togglePinDocument(document);
   };
 
+  const handleCompleteAll = async () => {
+    await completeAllTodoItems(document.id);
+  };
+
   const handleDeletePage = async () => {
     setShowOptions(false);
     await deleteDocument(document);
@@ -167,28 +171,27 @@ export const TodoPage = ({ document }: TodoPageProps) => {
     isActive,
   }: RenderItemParams<FlattenedTodoRow>) => {
     return (
-      <ScaleDecorator>
-        <TodoItemRow
-          item={item.item}
-          isSub={item.isSub}
-          onEnter={handleEnterOnItem}
-          onDeleteOnEmpty={handleDeleteOnEmpty}
-          dragHandle={
-            <TouchableOpacity
-              onLongPress={drag}
-              disabled={isActive}
-              delayLongPress={50}
-              hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
-            >
-              <MaterialCommunityIcons
-                name="drag-vertical"
-                size={22}
-                color={isActive ? colors.accent : colors.textSecondary}
-              />
-            </TouchableOpacity>
-          }
-        />
-      </ScaleDecorator>
+      <TodoItemRow
+        item={item.item}
+        isSub={item.isSub}
+        isActive={isActive}
+        onEnter={handleEnterOnItem}
+        onDeleteOnEmpty={handleDeleteOnEmpty}
+        dragHandle={
+          <TouchableOpacity
+            onLongPress={drag}
+            disabled={isActive}
+            delayLongPress={50}
+            hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+          >
+            <MaterialCommunityIcons
+              name="drag-vertical"
+              size={22}
+              color={isActive ? colors.accent : colors.textSecondary}
+            />
+          </TouchableOpacity>
+        }
+      />
     );
   };
 
@@ -203,6 +206,10 @@ export const TodoPage = ({ document }: TodoPageProps) => {
         </TouchableOpacity>
 
         <View style={styles.headerActions}>
+          <TouchableOpacity onPress={handleCompleteAll} style={styles.iconButton} activeOpacity={0.7}>
+            <MaterialCommunityIcons name="check-all" size={24} color={colors.text} />
+          </TouchableOpacity>
+
           <TouchableOpacity onPress={handleTogglePin} style={styles.iconButton} activeOpacity={0.7}>
             <MaterialCommunityIcons
               name={document.isPinned ? 'pin' : 'pin-outline'}

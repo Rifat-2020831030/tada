@@ -164,6 +164,45 @@ export async function toggleTodoComplete(targetItem: TodoItem): Promise<void> {
   });
 }
 
+export async function completeAllTodoItems(documentId: string): Promise<void> {
+  await database.write(async () => {
+    const collection = database.get<TodoItem>('todo_items');
+    const items = await collection.query(Q.where('document_id', documentId)).fetch();
+    const uncompleted = items.filter((i) => !i.isCompleted);
+
+    const now = new Date();
+    const updates: any[] = [];
+
+    if (uncompleted.length > 0) {
+      for (const item of uncompleted) {
+        updates.push(
+          item.prepareUpdate((t) => {
+            t.previousPosition = t.position;
+            t.isCompleted = true;
+            t.completedAt = now;
+          })
+        );
+      }
+    } else {
+      for (const item of items) {
+        const restoredPos = item.previousPosition || item.position;
+        updates.push(
+          item.prepareUpdate((t) => {
+            t.position = restoredPos;
+            t.previousPosition = null;
+            t.isCompleted = false;
+            t.completedAt = null;
+          })
+        );
+      }
+    }
+
+    if (updates.length > 0) {
+      await database.batch(...updates);
+    }
+  });
+}
+
 export async function deleteTodoItem(item: TodoItem): Promise<void> {
   await database.write(async () => {
     const collection = database.get<TodoItem>('todo_items');

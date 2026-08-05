@@ -17,6 +17,7 @@ import { useUIStore } from '../../stores/uiStore';
 interface TodoItemRowProps {
   item: TodoItemModel;
   isSub?: boolean;
+  isActive?: boolean;
   onEnter: (item: TodoItemModel) => void;
   onDeleteOnEmpty: (item: TodoItemModel) => void;
   dragHandle?: React.ReactNode;
@@ -25,6 +26,7 @@ interface TodoItemRowProps {
 export const TodoItemRow = ({
   item,
   isSub = false,
+  isActive = false,
   onEnter,
   onDeleteOnEmpty,
   dragHandle,
@@ -49,8 +51,13 @@ export const TodoItemRow = ({
 
   // Safely focus input only when target active focus changes and not already focused
   useEffect(() => {
-    if (isActiveFocus && inputRef.current && !inputRef.current.isFocused()) {
-      inputRef.current.focus();
+    if (isActiveFocus && inputRef.current) {
+      const timer = setTimeout(() => {
+        if (inputRef.current && !inputRef.current.isFocused()) {
+          inputRef.current.focus();
+        }
+      }, 50);
+      return () => clearTimeout(timer);
     }
   }, [isActiveFocus]);
 
@@ -81,6 +88,8 @@ export const TodoItemRow = ({
         {
           paddingLeft: isSub ? 36 : 12,
           opacity: isChecked ? 0.6 : 1,
+          backgroundColor: isActive ? colors.bgElevated : 'transparent',
+          borderRadius: isActive ? 8 : 0,
         },
       ]}
     >
