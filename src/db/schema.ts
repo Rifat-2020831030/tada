@@ -1,7 +1,7 @@
 import { appSchema, tableSchema } from '@nozbe/watermelondb';
 
 export const schema = appSchema({
-  version: 2,
+  version: 1,
   tables: [
     tableSchema({
       name: 'documents',
@@ -20,7 +20,7 @@ export const schema = appSchema({
       name: 'todo_items',
       columns: [
         { name: 'document_id', type: 'string', isIndexed: true },
-
+        { name: 'parent_id', type: 'string', isOptional: true },
         { name: 'text', type: 'string' },
         { name: 'is_completed', type: 'boolean' },
         { name: 'completed_at', type: 'number', isOptional: true },

@@ -25,7 +25,12 @@ export const Checkbox = ({ checked, onToggle, isSub = false }: CheckboxProps) =>
   });
 
   return (
-    <TouchableOpacity activeOpacity={0.7} onPress={onToggle} style={styles.touchable}>
+    <TouchableOpacity
+      activeOpacity={0.6}
+      onPress={onToggle}
+      hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
+      style={styles.touchable}
+    >
       <Animated.View
         style={[
           styles.container,

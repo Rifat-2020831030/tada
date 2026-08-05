@@ -16,6 +16,7 @@ import { useUIStore } from '../../stores/uiStore';
 
 interface TodoItemRowProps {
   item: TodoItemModel;
+  isSub?: boolean;
   onEnter: (item: TodoItemModel) => void;
   onDeleteOnEmpty: (item: TodoItemModel) => void;
   dragHandle?: React.ReactNode;
@@ -23,6 +24,7 @@ interface TodoItemRowProps {
 
 export const TodoItemRow = ({
   item,
+  isSub = false,
   onEnter,
   onDeleteOnEmpty,
   dragHandle,
@@ -33,15 +35,17 @@ export const TodoItemRow = ({
   const inputRef = useRef<RNTextInput>(null);
 
   const [localText, setLocalText] = useState(item.text);
+  const [isChecked, setIsChecked] = useState(item.isCompleted);
   const isActiveFocus = activeInputItemId === item.id;
 
-  // Sync with item.text when DB updates externally, but only if not actively typing
-  // This fixes the cursor jumping bug caused by delayed reactive DB updates.
+  // Sync with item.text and item.isCompleted when DB updates externally
   useEffect(() => {
-    if (inputRef.current && !inputRef.current.isFocused()) {
-      setLocalText(item.text);
-    }
+    setLocalText(item.text);
   }, [item.text]);
+
+  useEffect(() => {
+    setIsChecked(item.isCompleted);
+  }, [item.isCompleted]);
 
   // Safely focus input only when target active focus changes and not already focused
   useEffect(() => {
@@ -56,6 +60,7 @@ export const TodoItemRow = ({
   };
 
   const handleToggle = () => {
+    setIsChecked(!isChecked);
     toggleTodoComplete(item);
   };
 
@@ -74,15 +79,16 @@ export const TodoItemRow = ({
       style={[
         styles.rowContainer,
         {
-          opacity: item.isCompleted ? 0.6 : 1,
+          paddingLeft: isSub ? 36 : 12,
+          opacity: isChecked ? 0.6 : 1,
         },
       ]}
     >
-      {/* Drag handle on left */}
-      {dragHandle ? <View style={styles.dragHandle}>{dragHandle}</View> : null}
+      {/* Drag handle on left (root item only) */}
+      {!isSub && dragHandle ? <View style={styles.dragHandle}>{dragHandle}</View> : null}
 
       {/* Checkbox */}
-      <Checkbox checked={item.isCompleted} onToggle={handleToggle} />
+      <Checkbox checked={isChecked} onToggle={handleToggle} isSub={isSub} />
 
       {/* Text Input */}
       <RNTextInput
@@ -102,7 +108,7 @@ export const TodoItemRow = ({
           {
             color: colors.text,
             textDecorationLine: item.isCompleted ? 'line-through' : 'none',
-            fontSize: 16,
+            fontSize: isSub ? 15 : 16,
           },
         ]}
       />
@@ -120,7 +126,6 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     paddingRight: 12,
-    paddingLeft: 12,
     paddingVertical: 6,
     minHeight: 44,
   },

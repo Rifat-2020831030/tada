@@ -9,7 +9,7 @@ export class TodoItem extends Model {
   };
 
   @text('document_id') documentId!: string;
-
+  @text('parent_id') parentId!: string | null;
   @text('text') text!: string;
   @field('is_completed') isCompleted!: boolean;
   @date('completed_at') completedAt!: Date | null;

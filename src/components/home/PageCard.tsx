@@ -15,7 +15,7 @@ interface PageCardProps {
 export const PageCard = ({ document }: PageCardProps) => {
   const router = useRouter();
   const { colors } = useTheme();
-  const { uncompleted, completed } = useTodoItems(document.id);
+  const { uncompletedFlat, completedFlat } = useTodoItems(document.id);
 
   const selectedDocumentIds = useUIStore((state) => state.selectedDocumentIds);
   const isSelectionMode = useUIStore((state) => state.isSelectionMode);
@@ -24,7 +24,7 @@ export const PageCard = ({ document }: PageCardProps) => {
   const isSelected = selectedDocumentIds.includes(document.id);
 
   // Combine items up to 8 rows preview
-  const previewItems = [...uncompleted, ...completed].slice(0, 8);
+  const previewItems = [...uncompletedFlat, ...completedFlat].slice(0, 8);
 
   const handlePress = () => {
     if (isSelectionMode) {
@@ -67,8 +67,8 @@ export const PageCard = ({ document }: PageCardProps) => {
       ) : null}
 
       <View style={styles.previewContainer}>
-        {previewItems.map((item) => (
-          <View key={item.id} style={styles.previewRow}>
+        {previewItems.map(({ item, isSub }) => (
+          <View key={item.id} style={[styles.previewRow, isSub && styles.subPreviewRow]}>
             <MaterialCommunityIcons
               name={item.isCompleted ? 'checkbox-marked-outline' : 'checkbox-blank-outline'}
               size={14}
@@ -124,7 +124,9 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: 6,
   },
-
+  subPreviewRow: {
+    paddingLeft: 12,
+  },
   previewText: {
     fontSize: 13,
     flex: 1,

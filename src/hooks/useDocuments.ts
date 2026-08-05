@@ -2,24 +2,44 @@ import { useEffect, useState } from 'react';
 import { Q } from '@nozbe/watermelondb';
 import { database } from '../db';
 import { Document } from '../db/models/Document';
+import { TodoItem } from '../db/models/TodoItem';
+import { cleanupEmptyDocuments } from '../db/queries/documents';
 
 export function useDocuments(searchQuery: string = '') {
   const [documents, setDocuments] = useState<Document[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const collection = database.get<Document>('documents');
-    const query = collection.query(
+    // Run cleanup for any empty documents on load
+    cleanupEmptyDocuments();
+
+    const docCollection = database.get<Document>('documents');
+    const docQuery = docCollection.query(
       Q.where('is_archived', false),
       Q.sortBy('position', Q.asc)
     );
 
-    const subscription = query.observe().subscribe((docs) => {
+    const subscription = docQuery.observe().subscribe(async (docs) => {
+      const allItems = await database.get<TodoItem>('todo_items').query().fetch();
+
+      // Filter out empty notes (no title AND no items with text)
+      const validDocs = docs.filter((doc) => {
+        const items = allItems.filter((i) => i.documentId === doc.id);
+        const hasTitle = doc.title && doc.title.trim().length > 0;
+        const hasItemWithText = items.some((i) => i.text && i.text.trim().length > 0);
+        return hasTitle || hasItemWithText;
+      });
+
       if (!searchQuery.trim()) {
-        setDocuments(docs);
+        setDocuments(validDocs);
       } else {
         const queryLower = searchQuery.toLowerCase();
-        const filtered = docs.filter((doc) => doc.title.toLowerCase().includes(queryLower));
+        const filtered = validDocs.filter((doc) => {
+          const titleMatch = doc.title.toLowerCase().includes(queryLower);
+          const items = allItems.filter((i) => i.documentId === doc.id);
+          const itemMatch = items.some((i) => i.text.toLowerCase().includes(queryLower));
+          return titleMatch || itemMatch;
+        });
         setDocuments(filtered);
       }
       setLoading(false);

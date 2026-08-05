@@ -28,6 +28,7 @@ export async function exportAllData(): Promise<void> {
         updatedAt: doc.updatedAt ? doc.updatedAt.getTime() : Date.now(),
         todoItems: items.map((item) => ({
           id: item.id,
+          parentId: item.parentId,
           text: item.text,
           isCompleted: item.isCompleted,
           completedAt: item.completedAt ? item.completedAt.getTime() : null,
@@ -87,15 +88,37 @@ export async function importData(): Promise<{ success: boolean; count: number; e
 
         importedCount++;
 
+        // Id mapping for parents/sub-todos
+        const idMap: Record<string, string> = {};
+
         if (Array.isArray(docData.todoItems)) {
-          for (const itemData of docData.todoItems) {
+          // First pass: create root items
+          const rootData = docData.todoItems.filter((i: any) => !i.parentId);
+          for (const r of rootData) {
+            const createdRoot = await itemCollection.create((item) => {
+              item.documentId = createdDoc.id;
+              item.parentId = null;
+              item.text = r.text || '';
+              item.isCompleted = !!r.isCompleted;
+              item.completedAt = r.completedAt ? new Date(r.completedAt) : null;
+              item.position = r.position || generateKeyBetween(null, null);
+              item.previousPosition = r.previousPosition || null;
+            });
+            idMap[r.id] = createdRoot.id;
+          }
+
+          // Second pass: create sub-items mapped to new root IDs
+          const subData = docData.todoItems.filter((i: any) => i.parentId);
+          for (const s of subData) {
+            const mappedParentId = idMap[s.parentId] || null;
             await itemCollection.create((item) => {
               item.documentId = createdDoc.id;
-              item.text = itemData.text || '';
-              item.isCompleted = !!itemData.isCompleted;
-              item.completedAt = itemData.completedAt ? new Date(itemData.completedAt) : null;
-              item.position = itemData.position || generateKeyBetween(null, null);
-              item.previousPosition = itemData.previousPosition || null;
+              item.parentId = mappedParentId;
+              item.text = s.text || '';
+              item.isCompleted = !!s.isCompleted;
+              item.completedAt = s.completedAt ? new Date(s.completedAt) : null;
+              item.position = s.position || generateKeyBetween(null, null);
+              item.previousPosition = s.previousPosition || null;
             });
           }
         }

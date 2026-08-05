@@ -1,6 +1,7 @@
 import { Q } from '@nozbe/watermelondb';
 import { database } from '../index';
 import { Document } from '../models/Document';
+import { TodoItem } from '../models/TodoItem';
 import { NoteColor } from '../../types';
 import { initialPosition, positionBefore } from '../../utils/fractionalIndex';
 
@@ -60,9 +61,32 @@ export async function toggleArchiveDocument(doc: Document): Promise<void> {
 
 export async function deleteDocument(doc: Document): Promise<void> {
   await database.write(async () => {
-    const todoItems = await database.get('todo_items').query(Q.where('document_id', doc.id)).fetch();
-    const preparedDeletes = todoItems.map((item) => item.prepareDestroyPermanently());
+    const todoItems = await database.get<TodoItem>('todo_items').query(Q.where('document_id', doc.id)).fetch();
+    const preparedDeletes: any[] = todoItems.map((item) => item.prepareDestroyPermanently());
     preparedDeletes.push(doc.prepareDestroyPermanently());
     await database.batch(...preparedDeletes);
   });
+}
+
+export async function cleanupEmptyDocuments(): Promise<void> {
+  const docs = await database.get<Document>('documents').query().fetch();
+  const todoItems = await database.get<TodoItem>('todo_items').query().fetch();
+
+  const deletes: any[] = [];
+  for (const doc of docs) {
+    const items = todoItems.filter((i) => i.documentId === doc.id);
+    const hasTitle = doc.title && doc.title.trim().length > 0;
+    const hasItemWithText = items.some((i) => i.text && i.text.trim().length > 0);
+
+    if (!hasTitle && !hasItemWithText) {
+      items.forEach((i) => deletes.push(i.prepareDestroyPermanently()));
+      deletes.push(doc.prepareDestroyPermanently());
+    }
+  }
+
+  if (deletes.length > 0) {
+    await database.write(async () => {
+      await database.batch(...deletes);
+    });
+  }
 }

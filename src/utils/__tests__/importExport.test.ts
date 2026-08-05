@@ -17,7 +17,7 @@ describe('importExport utilities', () => {
 
   it('should export all data correctly', async () => {
     const doc = await createDocument('todo', 'Export Doc', 'blue');
-    await createTodoItem(doc.id, null, 'Task 1');
+    await createTodoItem(doc.id, null, null, 'Task 1');
 
     await exportAllData();
 
@@ -55,12 +55,14 @@ describe('importExport utilities', () => {
           todoItems: [
             {
               id: 'imported-todo-1',
+              parentId: null,
               text: 'Root Import Task',
               isCompleted: false,
               position: 'a1',
             },
             {
               id: 'imported-todo-2',
+              parentId: 'imported-todo-1',
               text: 'Sub Import Task',
               isCompleted: true,
               completedAt: Date.now(),
@@ -87,8 +89,8 @@ describe('importExport utilities', () => {
     const todoItems = await database.get('todo_items').query().fetch();
     expect(todoItems.length).toBe(2);
 
-    const rootTodo: any = todoItems.find((t: any) => t.text === 'Root Import Task');
-    const subTodo: any = todoItems.find((t: any) => t.text === 'Sub Import Task');
+    const rootTodo: any = todoItems.find((t: any) => !t.parentId);
+    const subTodo: any = todoItems.find((t: any) => t.parentId);
 
     expect(rootTodo).toBeDefined();
     expect(rootTodo.text).toBe('Root Import Task');
@@ -97,6 +99,7 @@ describe('importExport utilities', () => {
     expect(subTodo).toBeDefined();
     expect(subTodo.text).toBe('Sub Import Task');
     expect(subTodo.isCompleted).toBe(true);
+    expect(subTodo.parentId).toBe(rootTodo.id);
   });
 
   it('should return error when file is invalid during import', async () => {
